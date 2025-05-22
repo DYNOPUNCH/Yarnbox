@@ -148,7 +148,7 @@ class YarnStatement:
 	var type: statement_types 
 
 ##################################
-#----------- KEYWORDS ------------#
+#----------- KEYWORDS -----------#
 ##################################
 
 #TODO Put this in a seprate file.
@@ -401,8 +401,19 @@ func parseForLines(line: String):
 		
 	#print_rich("[color=green]Dialogue:[/color]" + current_node.lines[-1].dialogue)
 
+# Resolves the options for easier interpretation.
 func resolveOptions(_dictionary: Dictionary):
-	pass
+	print("Resolving options")
+	
+	for key: Variant in _dictionary.keys():
+		var node: Object = _dictionary[key]
+		print("You're in the " + node.title + " node.")
+		
+		for line in node.lines:
+			if line is YarnOption:
+				print("got a hit!")
+			else:
+				print("miss")
 
 # Calls loadFileRawLines, validates that it's a yarn files, and parses the contents into the system
 func loadYarnfile(filename: String):
@@ -421,7 +432,7 @@ func loadYarnfile(filename: String):
 			# Parses outer parts of node 
 			parseForNodes(line)
 		else:
-			# Parses Inner Part of node
+			# Parses inner Part of node
 			parseForLines(line)
 			
 	# Resolves the options after all text is loaded in. 
