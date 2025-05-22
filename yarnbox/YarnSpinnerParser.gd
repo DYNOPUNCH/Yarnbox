@@ -31,7 +31,7 @@ class YarnNode:
 	var lines := []
 	
 	# Initialize a new Yarn Node
-	func _init(_title: String, _position: Vector2i, _tags : Array, _lines: Array):
+	func _init(_title: String = "", _position: Vector2i = Vector2i(0,0), _tags : Array = [], _lines: Array = []):
 		title = _title
 		position = _position
 		tags = _tags
@@ -116,7 +116,7 @@ class YarnDialogue:
 	# Possible dialogue to be stored
 	var dialogue: String
 	
-	func _init(_name: String, _dialogue: String):
+	func _init(_name: String = "", _dialogue: String = ""):
 		name = _name
 		dialogue = _dialogue
 
@@ -124,6 +124,15 @@ class YarnDialogue:
 class YarnOption:
 	# Stores options until no more "->" are found at tab level
 	var option : String
+	var sublines : Array
+	var continuation_line : YarnDialogue
+	var tab_count : int
+	
+	func _init(_option: String = "", _sublines: Array = [], _continuation_line: YarnDialogue = null, _tab_count: int = 0) -> void:
+		option = _option
+		tab_count = _tab_count
+		sublines = _sublines
+		continuation_line = _continuation_line
 
 # The type of statement for teh interpretor to comprehend.
 enum statement_types {
@@ -156,7 +165,7 @@ var yarn_special_characters = {
 	"===" : triple_equal_handler,
 	"->" : point_handler,
 	":" : colon_handler,
-	
+	"<<" : l_angle_bracket_handler
 }
 
 ##################################
@@ -196,6 +205,12 @@ func get_string_value_from_pair(_string: String) -> String:
 	var value = word_tokens[0]
 	
 	return value
+
+func get_char_index(line: String, _char: String) -> int:
+		# Find the index of colon
+	var index = line.findn(_char)
+		
+	return index
 
 ##################################
 #----------- HANDLERS -----------#
@@ -269,10 +284,6 @@ func colon_handler(line: String):
 	# Find the index of colon
 	var index = line.findn(":")
 	
-	# If you somehow enter here and there is no colon magically then get out.
-	if(index == -1):
-		return
-	
 	# Temporary dialogue object
 	var temp_dialogue_line: YarnDialogue
 	
@@ -289,9 +300,37 @@ func colon_handler(line: String):
 	
 	print_rich("[color=yellow]Name:[/color]" + temp_dialogue_line.name + " [color=yellow]Dialogue:[/color]" + temp_dialogue_line.dialogue)
 
+#TODO Test Parsing options
+
 # Handles "->" special chacter
 func point_handler(line: String):
-	print("Found Option")
+	
+	# Find the index of colon
+	var index = line.findn("->")
+	
+	# Extracts the option text
+	var option_contents = line.substr(index + 2, line.length() - 1)
+	
+	option_contents = option_contents.strip_edges()
+	
+	var tab_count : int = line.count("\t")
+	
+	# Temporary dialogue object
+	var temp_option_line: YarnOption
+	
+	temp_option_line = YarnOption.new(option_contents, [], null,tab_count)
+	
+	# Add line to node's lines
+	current_node.add_line(temp_option_line)
+	
+	print_rich("[color=red]Option:[/color]" + temp_option_line.option + " [color=yellow]tab count:[/color]" + str(tab_count))
+
+func l_angle_bracket_handler(line: String):
+	
+	# Dictionary of statement types
+	var statement_type = {}
+	
+	print("Found Statement")
 
 ##################################
 #------ PARSING FUNCTIONS -------#
@@ -353,15 +392,17 @@ func parseForLines(line: String):
 		if (line.contains(special_character)):
 			#print("Found special character:", special_character)
 			yarn_special_characters[special_character].call(line)
-			break
+			return
 	
 	# No special characters, treat as normal dialogue
 	if(current_node != null):
 		current_node.add_line(YarnDialogue.new("", line))
-		print("Default")
+		print("Default" + line)
+		
 	#print_rich("[color=green]Dialogue:[/color]" + current_node.lines[-1].dialogue)
 
-
+func resolveOptions(_dictionary: Dictionary):
+	pass
 
 # Calls loadFileRawLines, validates that it's a yarn files, and parses the contents into the system
 func loadYarnfile(filename: String):
@@ -382,9 +423,12 @@ func loadYarnfile(filename: String):
 		else:
 			# Parses Inner Part of node
 			parseForLines(line)
+			
+	# Resolves the options after all text is loaded in. 
+	resolveOptions(node_dictionary)
 
 func _ready() -> void:
 	
 	# Testing to see if it works
 	loadYarnfile("MyStory.yarn")
-	print(node_dictionary.size())
+	print("\ndictionary size: " + str(node_dictionary.size()))
