@@ -401,6 +401,13 @@ func parseForLines(line: String):
 		
 	#print_rich("[color=green]Dialogue:[/color]" + current_node.lines[-1].dialogue)
 
+# Creates clusters of options put into an array 
+func createOptionClusters(number):
+	pass
+	
+func jumpToLine():
+	pass
+
 # Resolves the options for easier interpretation.
 func resolveOptions(_dictionary: Dictionary):
 	print("Resolving options")
