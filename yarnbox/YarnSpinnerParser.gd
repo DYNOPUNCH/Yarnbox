@@ -12,7 +12,7 @@ var node_dictionary = {}
 ##################################
 
 # Check if a node is actively having it's lines processed
-# Made this to avoice Nodes being nested in other nodes and causeing collisions
+# Made this to avoide Nodes being nested in other nodes and causeing collisions
 # When a node is active keywords are ignored as well
 var node_in_progress = false
 
@@ -110,13 +110,15 @@ class YarnNode:
 		remove_string_from_array(_index, lines)
 
 # A line that belongs to a yarn file
-class YarnDialogue:
+class YarnLine:
 	# Possible name to be stored
 	var name: String
 	# Possible dialogue to be stored
 	var dialogue: String
+	# Number of tabs from the left 
+	var tab_count : int
 	
-	func _init(_name: String = "", _dialogue: String = ""):
+	func _init(_name: String = "", _dialogue: String = "", tab_count: int = 0):
 		name = _name
 		dialogue = _dialogue
 
@@ -125,16 +127,14 @@ class YarnOption:
 	# Stores options until no more "->" are found at tab level
 	var option : String
 	var sublines : Array
-	var continuation_line : YarnDialogue
 	var tab_count : int
 	
-	func _init(_option: String = "", _sublines: Array = [], _continuation_line: YarnDialogue = null, _tab_count: int = 0) -> void:
+	func _init(_option: String = "", _sublines: Array = [], _continuation_line: YarnLine = null, _tab_count: int = 0) -> void:
 		option = _option
 		tab_count = _tab_count
 		sublines = _sublines
-		continuation_line = _continuation_line
 
-# The type of statement for teh interpretor to comprehend.
+# The type of statement for the interpretor to comprehend.
 enum statement_types {
 	JUMP = 0,
 	VARIABLE = 1,
@@ -285,20 +285,21 @@ func colon_handler(line: String):
 	var index = line.findn(":")
 	
 	# Temporary dialogue object
-	var temp_dialogue_line: YarnDialogue
+	var temp_dialogue_line: YarnLine
 	
-	# Extract name and dialogue
+	# Extract name, dialogue and tab count
 	var temp_name: String = line.substr(0, index)
 	var temp_dialogue: String = line.substr(index + 1, line.length() - 1)
 	
 	# Set the name and dialogue 
 	# Remove white space from edges
-	temp_dialogue_line = YarnDialogue.new(temp_name.strip_edges(), temp_dialogue.strip_edges())
+	temp_dialogue_line = YarnLine.new(temp_name.strip_edges(), temp_dialogue.strip_edges(), line.count("\t"))
 	
 	# Add line to node's lines
 	current_node.add_line(temp_dialogue)
 	
 	print_rich("[color=yellow]Name:[/color]" + temp_dialogue_line.name + " [color=yellow]Dialogue:[/color]" + temp_dialogue_line.dialogue)
+	print_rich("[color=green]tab count: [/color]" + str(temp_dialogue_line.tab_count))
 
 #TODO Test Parsing options
 
@@ -323,7 +324,7 @@ func point_handler(line: String):
 	# Add line to node's lines
 	current_node.add_line(temp_option_line)
 	
-	print_rich("[color=red]Option:[/color]" + temp_option_line.option + " [color=yellow]tab count:[/color]" + str(tab_count))
+	print_rich("[color=red]Option:[/color]" + temp_option_line.option + "\n[color=green]tab count:[/color]" + str(tab_count))
 
 func l_angle_bracket_handler(line: String):
 	
@@ -396,31 +397,18 @@ func parseForLines(line: String):
 	
 	# No special characters, treat as normal dialogue
 	if(current_node != null):
-		current_node.add_line(YarnDialogue.new("", line))
-		print("Default" + line)
+		var temp_dialogue_line : YarnLine = YarnLine.new("", line, line.count("\t"))
+		current_node.add_line(temp_dialogue_line)
+		print("Default: " + line)
+		print_rich("[color=green]tab count: [/color]" + str(temp_dialogue_line.tab_count))
 		
 	#print_rich("[color=green]Dialogue:[/color]" + current_node.lines[-1].dialogue)
 
-# Creates clusters of options put into an array 
-func createOptionClusters(number):
-	pass
-	
 func jumpToLine():
 	pass
 
-# Resolves the options for easier interpretation.
-func resolveOptions(_dictionary: Dictionary):
-	print("Resolving options")
-	
-	for key: Variant in _dictionary.keys():
-		var node: Object = _dictionary[key]
-		print("You're in the " + node.title + " node.")
-		
-		for line in node.lines:
-			if line is YarnOption:
-				print("got a hit!")
-			else:
-				print("miss")
+
+
 
 # Calls loadFileRawLines, validates that it's a yarn files, and parses the contents into the system
 func loadYarnfile(filename: String):
@@ -442,8 +430,6 @@ func loadYarnfile(filename: String):
 			# Parses inner Part of node
 			parseForLines(line)
 			
-	# Resolves the options after all text is loaded in. 
-	resolveOptions(node_dictionary)
 
 func _ready() -> void:
 	
